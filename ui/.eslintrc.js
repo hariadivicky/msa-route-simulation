@@ -1,0 +1,32 @@
+// https://eslint.org/docs/user-guide/configuring
+module.exports = {
+    root: true,
+    env: {
+      node: true
+    },
+    'extends': [
+      'plugin:vue/essential',
+      '@vue/standard'
+    ],
+    rules: {
+      // allow paren-less arrow functions
+      'arrow-parens': 0,
+      // allow async-await
+      'generator-star-spacing': 0,
+      // allow variables like >> user_id
+      'camelcase': 0,
+      'no-trailing-spaces': [
+        'error', {'skipBlankLines': true}
+      ],
+      'no-console': 'off',
+      'no-debugger': 'off'
+    },
+    parserOptions: {
+      parser: 'babel-eslint'
+    },
+    globals: {
+      __typecheck: true,
+      __type: true
+    }
+  }
+  
