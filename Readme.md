@@ -30,6 +30,8 @@ original task stored in [task.md](task.md) file.
     ```sh
     # go to server folder
     cd server
+    # install dependencies
+    go mod download
     # build and run
     go build
     ```
