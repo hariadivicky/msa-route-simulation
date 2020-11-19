@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// ServerOption .
 type ServerOption struct {
 	Address  string
 	AssetDir string
@@ -29,7 +31,8 @@ func httpError(w http.ResponseWriter, err error) {
 		status = http.StatusForbidden
 	}
 
-	http.Error(w, http.StatusText(status), status)
+	text := fmt.Sprintf("%s - %s", http.StatusText(status), err)
+	http.Error(w, text, status)
 }
 
 // serve asset file on public path /assets

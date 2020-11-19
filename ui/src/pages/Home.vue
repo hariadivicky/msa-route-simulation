@@ -16,12 +16,21 @@
       <select ref="route" v-model="selectedRoute" @change="showRoute">
         <option v-for="route in routes" :key="route" :id="route">{{ route }}</option>
       </select>
+
+      <div class="right">
+        <div>Meeting Est: {{ timeLeft }}s left</div>
+        <div>Total driver 1 & 2 steps: {{ traveler1.length }} | {{ traveler2.length }}</div>
+        <br>
+        <div>Travelling Speed {{ travellingSpeed }} step/second)</div>
+        <input type="range" min="0" max="750" value="0" step="250" v-model="movement.increasedSpeed">
+
+      </div>
     </div>
 
     <button class="button" @click="startRoute">Start</button>
 
     <div class="map-container"
-      :style="{minHeight: height + 'px'}"
+      :style="{marginTop: '50px', minHeight: height + 'px'}"
     >
         <div ref="map"
             class="map"
@@ -46,8 +55,13 @@ export default {
     UiModal
   },
 
-  data () {
+  created() {
+    axios.defaults.baseURL = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '' // current running host.
+  },
+
+  data() {
     return {
+      title: 'Route Simulator',
       msg: 'Route Simulator',
       isShownModal: false,
       inputError: false,
@@ -69,13 +83,43 @@ export default {
       selectedRoute: '',
       
       traveler1: [],
-      traveler2: []
+      traveler2: [],
+      
+      movement: {
+        timer: null,
+        increasedSpeed: 0,
+      },
+
+      path: [],
+
+      started: false
     }
   },
 
   computed: {
     height () {
       return window.innerHeight - 250
+    },
+
+    travellingSpeed() {
+      let pointPerSecond = 1000 / (1000 - this.movement.increasedSpeed)
+      return pointPerSecond.toFixed(2)
+    },
+
+    timeLeft() {
+      if ( ! this.path.length) {
+        return 0
+      }
+      
+      let currentSpeed = 1000 - this.movement.increasedSpeed
+      let pathLength = this.path.length / 2
+      let estimated = ((pathLength - this.traveler1.length) * currentSpeed) / 1000
+
+      if (estimated < 0) {
+        return 0
+      }
+
+      return estimated.toFixed(2)
     }
   },
 
@@ -84,6 +128,13 @@ export default {
       if (!this._map) return
 
       window.google.maps.event.trigger(this._map, 'resize')
+    },
+
+    'movement.increasedSpeed': function (newSpeed) {
+        if ( ! this.selectedRoute || ! this.started) return
+
+        clearInterval(this.movement.timer)
+        this.movement.timer = setInterval(this.makeMovement, 1000 - newSpeed)
     }
   },
 
@@ -217,8 +268,19 @@ export default {
     showRoute () {
       this.busy = true
 
+      this.started = false
+
+      this.traveler1 = []
+      this.traveler2 = []
+
+      this.traveler1Map.setPath(this.traveler1)
+      this.traveler2Map.setPath(this.traveler2)
+
+      clearInterval(this.movement.timer)
+
       axios.get(`/api/routes/${this.selectedRoute}/coordinates`)
         .then(resp => {
+          this.path = resp.data
           this.routeMap.setPath(resp.data || [])
           this.busy = false
         })
@@ -260,11 +322,6 @@ export default {
       this.traveler1Pos = nextPost
 
       this.traveler1Map.setPath(this.traveler1)
-
-      let vm = this
-      setTimeout(() => {
-        vm.traveler1Move()
-      }, 1000)
     },
 
     async traveler2Move () {
@@ -275,14 +332,11 @@ export default {
       this.traveler2Pos = nextPost
 
       this.traveler2Map.setPath(this.traveler2)
-
-      let vm = this
-      setTimeout(() => {
-        vm.traveler2Move()
-      }, 1000)
     },
 
     async startRoute () {
+      this.started = true
+
       this.traveler1 = []
       this.traveler2 = []
       this.traveler1Map.setPath([])
@@ -291,12 +345,37 @@ export default {
       this.traveler1Pos = await this.getStartRoute()
       this.traveler2Pos = await this.getStartRoute(true)
 
-      this.traveler1Move()
-      this.traveler2Move()
+      // default speed is 1s/point. lower number, faster speed.
+      this.movement.timer = setInterval(this.makeMovement, (1000 - this.movement.increasedSpeed))
     },
 
-    isMeetingPoint() {
-      // TODO: calculate whether current traveler1 and traveler 2 position is meeting point, show information to UI
+    isMeetingPoint(point1) {
+      // don't compare point1 vs point2 position, their meet is uncertain.
+      // instead check if traveller1 was in traveller2 pos, it's mean they were meet!
+      return this.traveler2.find(p => p.lat == point1.lat && p.lng == point1.lng)
+    },
+
+    async makeMovement() {
+      
+        try {
+          // make sure if all travellers moving at same amount before continue to next iteration
+          await Promise.all([
+            this.traveler1Move(),
+            this.traveler2Move()
+          ])
+
+        } catch (e) {
+          alert('an error occured, please check console')
+          clearInterval(this.movement.timer)
+          console.err(e)
+          return
+        }
+
+        // check for meeting point
+        if (this.isMeetingPoint(this.traveler1Pos)) {
+          clearInterval(this.movement.timer)
+          this.isShownModal = true
+        }
     },
 
     showToast () {
@@ -335,6 +414,10 @@ export default {
 }
 .map-hidden {
     display: none;
+}
+
+.form .right {
+  float: right;
 }
 
 </style>

@@ -1,37 +1,54 @@
-# Code Me - Route Simulator ###
+# Code Me - Route Simulator
 
-## finish incomplete project
 This project simulates classic problem which to calculate meeting point between two riders on given routes.
 Take point A and point B as route start and finish, one rider start from point A while other rider start from point B.
 Find location of meeting point (coordinate) and time (second) required them to met.
 
-### task 
-1. Implement route reader interface and must fulfill unit test.
-2. Implement API endpoint for server route data.
-3. Implement frontend codes to simulate route path and rider traveling path.
-4. Calculate and display information of meeting point and time. 
+original task stored in [task.md](task.md) file.
 
-## goal ilustration
-![alt text](/resource/route-animation.gif "Route animation")
+## Build Source
 
-## how to build the project
-### Frontend app
-install `node`, `npm` and `yarn`
+1. Clone this repository
 
-go to `ui` folder
+    ```sh
+    git clone https://github.com/hariadivicky/msa-route-simulation
+    ```
 
-run `yarn build`
+2. Build frontend
 
-### Backend / API 
-go to `server` folder 
+    ```sh
+    # go to ui folder
+    cd ui
+    # install NPM dependencies and build
+    npm install && npm run build
+    ```
 
-build using `go build` 
+3. Build backend
 
-start project by using `./server` use available options if required
+    ```sh
+    # go to server folder
+    cd server
+    # build and run
+    go build
+    ```
 
-### More chalenge.
-webpack custom configuration to ease development experience, eg: using `webpack --watch`
+4. Run
 
-configurable "speed" which can represented by delay between route point
+    ```sh
+    # we assume you are in server/ directory
+    ./server
 
-use combination of websocket and goroutine workers to publish updated location of rider to frontend application. 
+    # server listening on localhost:8000
+    ```
+
+## Development Mode
+
+Only for frontend
+
+```sh
+# go to ui directory
+cd ui
+
+# run watcher & hot reload
+npm run serve
+```

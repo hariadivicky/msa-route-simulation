@@ -35,6 +35,30 @@ var (
 	readerLock sync.Once
 )
 
+// FindNext finds next coordinate point.
+func (route Route) FindNext(currentPoint Point, reverse bool) (Point, error) {
+	foundIndex := -1
+	for i, point := range route.Points {
+		if point.Latitude == currentPoint.Latitude && point.Longitude == currentPoint.Longitude {
+			foundIndex = i
+		}
+	}
+
+	if (foundIndex == len(route.Points)-1 && !reverse) || (foundIndex == 0 && reverse) {
+		return Point{}, fmt.Errorf("point reach maximum value")
+	}
+
+	if foundIndex == -1 {
+		return Point{}, fmt.Errorf("could not find next point")
+	}
+
+	if reverse {
+		return route.Points[foundIndex-1], nil
+	}
+
+	return route.Points[foundIndex+1], nil
+}
+
 // RegisterReader add new route reader factory to list
 func RegisterReader(name string, factory CreateReader) {
 	readerLock.Do(func() {

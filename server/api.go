@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -27,10 +29,21 @@ func writeResponse(w http.ResponseWriter, data interface{}, statusCode ...int) {
 func serveAPI(router *mux.Router) {
 	subRouter := router.PathPrefix("/api").Subrouter()
 
-	subRouter.HandleFunc("/routes", getRoutes)
-	subRouter.HandleFunc("/routes/{route}/coordinates", getRouteCoordinates)
-	subRouter.HandleFunc("/routes/{route}/start", getRouteStart)
-	subRouter.HandleFunc("/routes/{route}/next", getNextCoordinate)
+	subRouter.HandleFunc("/routes", allowSimpleCors(getRoutes))
+	subRouter.HandleFunc("/routes/{route}/coordinates", allowSimpleCors(getRouteCoordinates))
+	subRouter.HandleFunc("/routes/{route}/start", allowSimpleCors(getRouteStart))
+	subRouter.HandleFunc("/routes/{route}/next", allowSimpleCors(getNextCoordinate))
+}
+
+// allowSimpleCors allows cors request, only for reading data.
+// this is helpful for development mode when our frontend running on different port.
+func allowSimpleCors(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Vary", "Origin")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		next.ServeHTTP(w, r)
+	}
 
 }
 
@@ -58,6 +71,20 @@ func getRouteCoordinates(w http.ResponseWriter, r *http.Request) {
 func getRouteStart(w http.ResponseWriter, r *http.Request) {
 	routeName := mux.Vars(r)["route"]
 	reverse := r.URL.Query().Get("direction") == "reverse"
+	route, ok := routeMap[routeName]
+	if !ok {
+		httpError(w, fmt.Errorf("route %s is not registered", routeName))
+		return
+	}
+
+	var cursor int
+	if reverse {
+		// puts cursor to last point.
+		cursor = len(route.Points) - 1
+	}
+
+	point := route.Points[cursor]
+	writeResponse(w, point)
 
 	// TODO: get route starting point, direction forward or reverse
 }
@@ -67,6 +94,29 @@ func getNextCoordinate(w http.ResponseWriter, r *http.Request) {
 	reverse := r.URL.Query().Get("direction") == "reverse"
 	currentPoint := r.URL.Query().Get("current")
 
-	// TODO: get next coordinate from current coordinate. need to aware reverse route.
+	if currentPoint == "" {
+		httpError(w, fmt.Errorf("current parameter is required"))
+		return
+	}
 
+	route, ok := routeMap[routeName]
+	if !ok {
+		httpError(w, fmt.Errorf("route %s is not registered", routeName))
+		return
+	}
+
+	var point Point
+
+	if err := json.NewDecoder(strings.NewReader(currentPoint)).Decode(&point); err != nil {
+		httpError(w, err)
+		return
+	}
+
+	nextPoint, err := route.FindNext(point, reverse)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	writeResponse(w, nextPoint)
 }
