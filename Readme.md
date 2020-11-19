@@ -1,5 +1,7 @@
 # Code Me - Route Simulator
 
+![route result](/resource/result.gif "Route result animation")
+
 This project simulates classic problem which to calculate meeting point between two riders on given routes.
 Take point A and point B as route start and finish, one rider start from point A while other rider start from point B.
 Find location of meeting point (coordinate) and time (second) required them to met.
